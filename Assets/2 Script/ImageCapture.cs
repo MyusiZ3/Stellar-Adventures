@@ -3,11 +3,12 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
+using System.IO;
 
 public class ImageCapture : MonoBehaviour
 {
     [Header("Capture Setting")]
-    public string Path;
+    public string Path; // Path bisa di-custom, defaultnya ke DCIM
     public Camera ScreenshotCamera; // Kamera khusus untuk screenshot
     public int ResolutionWidth = 1920;
     public int ResolutionHeight = 1080;
@@ -21,6 +22,15 @@ public class ImageCapture : MonoBehaviour
     public CanvasGroup ScreenshotCanvasGroup; // CanvasGroup untuk animasi fade
     public float DisplayDuration = 2f; // Durasi tampil screenshot
     public float FadeDuration = 0.5f; // Durasi animasi fade in/out
+
+    void Start()
+    {
+        // Tentukan path untuk Android dan buat folder jika belum ada
+        if (Application.platform == RuntimePlatform.Android)
+        {
+            Path = GetAndroidStoragePath();
+        }
+    }
 
     public void InvokeCameraCapture()
     {
@@ -51,7 +61,7 @@ public class ImageCapture : MonoBehaviour
 
         // Simpan gambar ke file
         filename = Path + "/" + DateTime.Now.ToString("MM_dd_yyyy_h_mm_ss") + ".png";
-        System.IO.File.WriteAllBytes(filename, screenshot.EncodeToPNG());
+        File.WriteAllBytes(filename, screenshot.EncodeToPNG());
         Debug.Log("Screenshot saved: " + filename);
 
         // Tampilkan screenshot di UI
@@ -122,5 +132,29 @@ public class ImageCapture : MonoBehaviour
 
         // Sembunyikan UI
         ScreenshotCanvasGroup.gameObject.SetActive(false);
+    }
+
+    // Menentukan path untuk Android dengan opsi custom
+    string GetAndroidStoragePath()
+    {
+        string directoryPath = "";
+
+        // Menggunakan AndroidJavaObject untuk mengakses path DCIM
+        using (AndroidJavaClass environment = new AndroidJavaClass("android.os.Environment"))
+        {
+            // Mengambil path DCIM
+            AndroidJavaObject externalStorageDir = environment.CallStatic<AndroidJavaObject>("getExternalStoragePublicDirectory", "DCIM");
+
+            // Menambahkan folder "Stellar Capture" di dalamnya
+            directoryPath = externalStorageDir.Call<string>("getAbsolutePath") + "/Stellar Capture";
+        }
+
+        // Cek apakah folder sudah ada, jika belum buat
+        if (!Directory.Exists(directoryPath))
+        {
+            Directory.CreateDirectory(directoryPath); // Membuat folder jika belum ada
+        }
+
+        return directoryPath;
     }
 }
